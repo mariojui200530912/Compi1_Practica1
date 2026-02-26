@@ -1278,7 +1278,10 @@ class CUP$AnalizadorSintactico$actions {
           case 56: // color_val ::= HEX 
             {
               String RESULT =null;
-
+		int hleft = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()).left;
+		int hright = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()).right;
+		Object h = (Object)((java_cup.runtime.Symbol) CUP$AnalizadorSintactico$stack.peek()).value;
+		 RESULT = String.valueOf(h); 
               CUP$AnalizadorSintactico$result = parser.getSymbolFactory().newSymbol("color_val",16, ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()), ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()), RESULT);
             }
           return CUP$AnalizadorSintactico$result;
@@ -1287,7 +1290,18 @@ class CUP$AnalizadorSintactico$actions {
           case 57: // color_val ::= expresion_arit COMA expresion_arit COMA expresion_arit 
             {
               String RESULT =null;
-
+		int rleft = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-4)).left;
+		int rright = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-4)).right;
+		String r = (String)((java_cup.runtime.Symbol) CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-4)).value;
+		int gleft = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-2)).left;
+		int gright = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-2)).right;
+		String g = (String)((java_cup.runtime.Symbol) CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-2)).value;
+		int bleft = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()).left;
+		int bright = ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()).right;
+		String b = (String)((java_cup.runtime.Symbol) CUP$AnalizadorSintactico$stack.peek()).value;
+		
+        RESULT = String.valueOf(r) + "," + String.valueOf(g) + "," + String.valueOf(b);
+    
               CUP$AnalizadorSintactico$result = parser.getSymbolFactory().newSymbol("color_val",16, ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.elementAt(CUP$AnalizadorSintactico$top-4)), ((java_cup.runtime.Symbol)CUP$AnalizadorSintactico$stack.peek()), RESULT);
             }
           return CUP$AnalizadorSintactico$result;

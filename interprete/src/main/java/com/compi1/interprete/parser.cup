@@ -243,7 +243,11 @@ config_instruccion ::=
     | OPC_DEFAULT ASIGNAR ENTERO:idx
       {: parser.configuraciones.put("DEFAULT", String.valueOf(idx)); :};
 
-color_val ::= HEX | expresion_arit COMA expresion_arit COMA expresion_arit;
+color_val ::= HEX:h {: RESULT = String.valueOf(h); :}
+    | expresion_arit:r COMA expresion_arit:g COMA expresion_arit:b
+    {:
+        RESULT = String.valueOf(r) + "," + String.valueOf(g) + "," + String.valueOf(b);
+    :};
 nombre_figura ::= FIG_ELIPSE {: RESULT = "ELIPSE"; :}
                 | FIG_CIRCULO {: RESULT = "CIRCULO"; :}
                 | FIG_PARALELO {: RESULT = "PARALELOGRAMO"; :}

@@ -113,6 +113,9 @@ class MainActivity : AppCompatActivity() {
         val cabecerasEst = arrayOf("Estructura", "Línea", "Condición")
         llenarTabla(tablaEst, cabecerasEst, ests)
 
+        val totalConfigs = parser.configuraciones.size
+        Toast.makeText(this, "Configuraciones guardadas: $totalConfigs", Toast.LENGTH_LONG).show()
+
         val nodosDinamicos = mutableListOf<NodoFlujo>()
 
         // Nodo Obligatorio
