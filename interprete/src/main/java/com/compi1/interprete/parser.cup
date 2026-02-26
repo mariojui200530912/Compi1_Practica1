@@ -1,0 +1,257 @@
+package com.compi1.interprete;
+import java_cup.runtime.*;
+import java.util.*;
+
+parser code {:
+    // Inicialización de las listas para los reportes
+    public List<String[]> reporteErrores = new ArrayList<>();
+    public List<String[]> reporteOperadores = new ArrayList<>();
+    public List<String[]> reporteEstructuras = new ArrayList<>();
+    public LinkedList reporteDiagrama = new LinkedList();
+    public HashMap<String, String> configuraciones = new HashMap<>();
+
+    public void syntax_error(Symbol s) {
+        String lexema = (s.value != null) ? s.value.toString() : "Fin de archivo";
+            String linea = String.valueOf(s.left);
+            String columna = String.valueOf(s.right);
+
+            String tipo = "Error Sintáctico";
+            String desc = "Elemento inesperado cerca de '" + lexema + "'";
+                if (s.sym == sym.ERROR_LEXICO) {
+                    tipo = "Error Léxico";
+                    desc = "Símbolo no reconocido en el lenguaje: '" + lexema + "'";
+                }
+
+            reporteErrores.add(new String[]{lexema, linea, columna, tipo, desc});
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        // Se ejecuta cuando el parser ya no puede seguir analizando
+    }
+:};
+
+// Terminales Pseudocodigo
+terminal INICIO, FIN, VAR, SI, ENTONCES, FIN_SI, MIENTRAS, HACER, FIN_MIENTRAS;
+terminal MOSTRAR, LEER, SEPARADOR, ASIGNAR;
+terminal String SUMA, RESTA, MULT, DIV;
+terminal LPAREN, RPAREN, IGUALDAD, DIFERENTE, MAYOR_IGUAL, MENOR_IGUAL, MAYOR, MENOR, AND, OR, NOT;
+terminal String ID, ENTERO, DECIMAL, CADENA, ERROR_LEXICO;
+
+// Terminales Configuracion
+terminal OPC_DEFAULT, OPC_COLOR_TXT_SI, OPC_COLOR_SI, OPC_FIG_SI, OPC_LET_SI, OPC_LET_SIZE_SI;
+terminal OPC_COLOR_TXT_MIE, OPC_COLOR_MIE, OPC_FIG_MIE, OPC_LET_MIE, OPC_LET_SIZE_MIE;
+terminal OPC_COLOR_TXT_BLOQ, OPC_COLOR_BLOQ, OPC_FIG_BLOQ, OPC_LET_BLOQ, OPC_LET_SIZE_BLOQ;
+terminal FIG_ELIPSE, FIG_CIRCULO, FIG_PARALELO, FIG_RECT, FIG_ROMBO, FIG_RECT_RED;
+terminal LET_ARIAL, LET_TIMES, LET_COMIC, LET_VERDANA, HEX, PIPE, COMA;
+
+// No Terminales
+non terminal inicio_programa, seccion_algoritmo, seccion_config;
+non terminal config_instrucciones, config_instruccion;
+non terminal LinkedList instrucciones, instruccion, bloque_simple, condicional, ciclo, instrucciones_internas;
+non terminal String expresion_arit, expresion_rel, expresion_log, nombre_figura, nombre_letra, color_val;
+
+// Precedencias
+precedence left SUMA, RESTA;
+precedence left MULT, DIV;
+precedence left LPAREN, RPAREN;
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+
+start with inicio_programa;
+
+// Estructura Principal
+inicio_programa ::= seccion_algoritmo SEPARADOR seccion_config;
+
+seccion_algoritmo ::= INICIO instrucciones:inst FIN;
+
+instrucciones ::= instrucciones:i1 instruccion:i2
+    {:
+        i1.addAll(i2);
+        RESULT = i1;
+        parser.reporteDiagrama = i1;
+    :}
+    | instruccion:i1
+    {:
+        RESULT = i1;
+        parser.reporteDiagrama = i1;
+    :};
+
+instruccion ::= bloque_simple:b {: RESULT = b; :}
+              | condicional:c   {: RESULT = c; :}
+              | ciclo:c         {: RESULT = c; :}
+              | error
+              {:
+                RESULT= new LinkedList();
+              :};
+
+instrucciones_internas ::= instrucciones_internas:i1 bloque_simple:i2
+    {:
+        i1.addAll(i2);
+        RESULT = i1;
+    :}
+    | bloque_simple:i1
+    {:
+        RESULT = i1;
+    :};
+
+// Instrucciones para diagrama
+
+bloque_simple ::=
+      VAR ID:i ASIGNAR expresion_arit:e
+      {:
+          java.util.LinkedList nodo = new java.util.LinkedList();
+          nodo.add(new String[]{"VAR " + i + " = " + e, "RECTANGULO"});
+          RESULT = nodo;
+      :}
+    | ID:i ASIGNAR expresion_arit:e
+      {:
+          java.util.LinkedList nodo = new java.util.LinkedList();
+          nodo.add(new String[]{i + " = " + e, "RECTANGULO"});
+          RESULT = nodo;
+      :}
+    | MOSTRAR expresion_arit:e
+      {:
+          java.util.LinkedList nodo = new java.util.LinkedList();
+          nodo.add(new String[]{"MOSTRAR " + e, "RECTANGULO_REDONDEADO"});
+          RESULT = nodo;
+      :}
+    | MOSTRAR CADENA:c
+      {:
+          java.util.LinkedList nodo = new java.util.LinkedList();
+          nodo.add(new String[]{"MOSTRAR " + c, "RECTANGULO_REDONDEADO"});
+          RESULT = nodo;
+      :}
+    | LEER ID:i
+      {:
+          java.util.LinkedList nodo = new java.util.LinkedList();
+          nodo.add(new String[]{"LEER " + i, "RECTANGULO_REDONDEADO"});
+          RESULT = nodo;
+      :};
+
+condicional ::= SI LPAREN expresion_log:c RPAREN ENTONCES instrucciones_internas:internas FIN_SI
+    {:
+        parser.reporteEstructuras.add(new String[]{"SI", String.valueOf(cleft), String.valueOf(c)});
+
+        java.util.LinkedList nodo = new java.util.LinkedList();
+        nodo.add(new String[]{String.valueOf(c), "ROMBO_SI"});
+        nodo.addAll(internas);
+        RESULT = nodo;
+    :};
+
+ciclo ::= MIENTRAS LPAREN expresion_log:c RPAREN HACER instrucciones_internas:internas FIN_MIENTRAS
+    {:
+        parser.reporteEstructuras.add(new String[]{"MIENTRAS", String.valueOf(cleft), String.valueOf(c)});
+
+        java.util.LinkedList nodo = new java.util.LinkedList();
+        nodo.add(new String[]{String.valueOf(c), "ROMBO_MIE"});
+        nodo.addAll(internas);
+        RESULT = nodo;
+    :};
+
+// Matematica y Logica
+expresion_arit ::=
+                    ENTERO:n  {: RESULT = n; :}
+                    | DECIMAL:d {: RESULT = d; :}
+                    | ID:i      {: RESULT = i; :}
+                    | expresion_arit:e1 SUMA:op expresion_arit:e2
+                    {:
+                        reporteOperadores.add(new String[]{"Suma", String.valueOf(opleft), String.valueOf(opright), e1 + " + " + e2});
+                        RESULT = e1 + " + " + e2;
+                    :}
+                    | expresion_arit:e1 RESTA:op expresion_arit:e2
+                    {:
+                        reporteOperadores.add(new String[]{"Resta", String.valueOf(opleft), String.valueOf(opright), e1 + " - " + e2});
+                        RESULT = e1 + " - " + e2;
+                    :}
+                    | expresion_arit:e1 MULT:op expresion_arit:e2
+                    {:
+                        reporteOperadores.add(new String[]{"Multiplicación", String.valueOf(opleft), String.valueOf(opright), e1 + " * " + e2});
+                        RESULT = e1 + " * " + e2;
+                    :}
+                    | expresion_arit:e1 DIV:op expresion_arit:e2
+                    {:
+                        reporteOperadores.add(new String[]{"División", String.valueOf(opleft), String.valueOf(opright), e1 + " / " + e2});
+                        RESULT = e1 + " / " + e2;
+                    :}
+                    | LPAREN expresion_arit:e RPAREN {: RESULT = "(" + e + ")"; :};
+
+expresion_rel ::= expresion_arit:e1 IGUALDAD expresion_arit:e2 {: RESULT = e1 + " == " + e2; :}
+                | expresion_arit:e1 DIFERENTE expresion_arit:e2 {: RESULT = e1 + " != " + e2; :}
+                | expresion_arit:e1 MAYOR expresion_arit:e2 {: RESULT = e1 + " > " + e2; :}
+                | expresion_arit:e1 MENOR expresion_arit:e2 {: RESULT = e1 + " < " + e2; :}
+                | expresion_arit:e1 MAYOR_IGUAL expresion_arit:e2 {: RESULT = e1 + " >= " + e2; :}
+                | expresion_arit:e1 MENOR_IGUAL expresion_arit:e2 {: RESULT = e1 + " <= " + e2; :};
+
+expresion_log ::= expresion_rel:r {: RESULT = r; :}
+                | expresion_log:l1 AND expresion_log:l2 {: RESULT = l1 + " && " + l2; :}
+                | expresion_log:l1 OR expresion_log:l2  {: RESULT = l1 + " || " + l2; :}
+                | NOT expresion_log:l {: RESULT = "!" + l; :}
+                | LPAREN expresion_log:l RPAREN {: RESULT = "(" + l + ")"; :};
+
+// Configuraciones
+seccion_config ::= config_instrucciones;
+
+config_instrucciones ::= config_instrucciones config_instruccion | config_instruccion;
+
+config_instruccion ::=
+      OPC_COLOR_TXT_SI ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_TXT_SI_" + idx, String.valueOf(v)); :}
+
+    | OPC_COLOR_SI ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_SI_" + idx, String.valueOf(v)); :}
+
+    | OPC_FIG_SI ASIGNAR nombre_figura:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("FIG_SI_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_SI ASIGNAR nombre_letra:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_SI_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_SIZE_SI ASIGNAR expresion_arit:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_SIZE_SI_" + idx, String.valueOf(v)); :}
+
+    | OPC_COLOR_TXT_MIE ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_TXT_MIE_" + idx, String.valueOf(v)); :}
+
+    | OPC_COLOR_MIE ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_MIE_" + idx, String.valueOf(v)); :}
+
+    | OPC_FIG_MIE ASIGNAR nombre_figura:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("FIG_MIE_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_MIE ASIGNAR nombre_letra:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_MIE_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_SIZE_MIE ASIGNAR expresion_arit:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_SIZE_MIE_" + idx, String.valueOf(v)); :}
+
+    | OPC_COLOR_TXT_BLOQ ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_TXT_BLOQ_" + idx, String.valueOf(v)); :}
+
+    | OPC_COLOR_BLOQ ASIGNAR color_val:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("COLOR_BLOQ_" + idx, String.valueOf(v)); :}
+
+    | OPC_FIG_BLOQ ASIGNAR nombre_figura:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("FIG_BLOQ_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_BLOQ ASIGNAR nombre_letra:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_BLOQ_" + idx, String.valueOf(v)); :}
+
+    | OPC_LET_SIZE_BLOQ ASIGNAR expresion_arit:v PIPE ENTERO:idx
+      {: parser.configuraciones.put("LET_SIZE_BLOQ_" + idx, String.valueOf(v)); :}
+
+    | OPC_DEFAULT ASIGNAR ENTERO:idx
+      {: parser.configuraciones.put("DEFAULT", String.valueOf(idx)); :};
+
+color_val ::= HEX | expresion_arit COMA expresion_arit COMA expresion_arit;
+nombre_figura ::= FIG_ELIPSE {: RESULT = "ELIPSE"; :}
+                | FIG_CIRCULO {: RESULT = "CIRCULO"; :}
+                | FIG_PARALELO {: RESULT = "PARALELOGRAMO"; :}
+                | FIG_RECT {: RESULT = "RECTANGULO"; :}
+                | FIG_ROMBO {: RESULT = "ROMBO"; :}
+                | FIG_RECT_RED {: RESULT = "RECTANGULO_REDONDEADO"; :};
+
+nombre_letra ::= LET_ARIAL {: RESULT = "ARIAL"; :}
+               | LET_TIMES {: RESULT = "TIMES"; :}
+               | LET_COMIC {: RESULT = "COMIC"; :}
+               | LET_VERDANA {: RESULT = "VERDANA"; :};
